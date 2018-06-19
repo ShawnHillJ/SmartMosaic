@@ -28,10 +28,34 @@ def getModeColor(img):
     colorCount.sort()
     return colorCount[len(colorCount) - 1][1]
 
+def splitImageEvenly(img, s_width, s_height):
+    '''Splits up an image into segments and returns a list of those segments.
+       Segments are closest to the whole size and are center-oriented.'''
+    assert s_width > 0 and s_height > 0
+    x_offset = ((img.width / s_width) % 1) * s_width // 2
+    y_offset = ((img.height / s_height) % 1) * s_height // 2
+    x_count, y_count = (img.width // s_width), (img.height // s_height)
+    assert x_count > 0 and y_count > 0
+
+    print("x_count =", x_count, "y_count =", y_count)
+
+    segment_list = []
+    for x in range(x_count):
+        for y in range(y_count):
+            print((x * s_width + x_offset, y * s_height + y_offset,
+                               (x + 1) * s_width + x_offset, (y + 1) * s_height + y_offset))
+            segment_list.append(img.crop((x * s_width + x_offset, y * s_height + y_offset,
+                               (x + 1) * s_width + x_offset, (y + 1) * s_height + y_offset)))
+    return segment_list
+
 
 #debugging area
-#im = Image.open("test.jpg")
-#im.show()
+im = Image.open("test.jpg")
+im.show()
+
+seg_list_test = splitImageEvenly(im, 50, 50)
+for entry in seg_list_test:
+    entry.show()
 
 #dir_list = getAllNamesFromDir(r'C:\Users\Devastator\Pictures\testing_series')
 #print(dir_list, '\n\n')

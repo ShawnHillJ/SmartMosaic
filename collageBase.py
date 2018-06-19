@@ -1,6 +1,7 @@
 #basic collage class
 
 from PIL import Image
+from random import randint
 import imageReader
 
 class MosaicBase:
@@ -26,6 +27,7 @@ class MosaicBase:
         self.sampleScale = sam_size
         self.outputWidth, self.outputHeight = out_width, out_height
         self.colorQuality = colors
+        self.samplesLoaded = False
         
         return
 
@@ -36,25 +38,32 @@ class MosaicBase:
     def loadImages(self, imageList):
         '''Loads in a sequence of images into the collage object.'''
         self.sampleImagesNamelist = imageList
+        self.samplesLoaded = False
 
     def _scale_images(self):
         ''' Loads in the images for sampleImages. '''
-        self.sampleImages = imageReader.getImagesFromDirList(self.sampleImagesNamelist,
-                            self.sampleScale, self.sampleScale, self.colorQuality)
+        if not self.samplesLoaded:
+            self.sampleImages = imageReader.getImagesFromDirList(self.sampleImagesNamelist,
+                                self.sampleScale, self.sampleScale, self.colorQuality)
+            self.samplesLoaded = True
         
     def _scale_source(self):
-        ''' Scales the source image for the output.
-        '''
+        ''' Scales the source image for the output.'''
         temp = Image.open(self.sourceImage)
         self.scaledSource = temp.resize((self.outputWidth, self.outputHeight))
 
-    def generateOverlayMosaic(self, output):
+    def exportImages(self, output_dir):
+        ''' Exports the scaled sample images into the specified directory.'''
+        if not self.samplesLoaded:
+            self._scale_images()
+        counter = '0'
+        for img_object in self.sampleImages:
+            img_object.save(output_dir + '\\' + counter.zfill(4) + '.jpg')
+        
+    def generateOverlayMosaic(self, output, blend_factor):
         ''' Generates a mosaic using the simple overlay method.
         Outputs the image as a file with the name given as
-        an argument.
-
-        still in-progress
-        '''
+        an argument.'''
         self._scale_images()
         self._scale_source()
         
@@ -66,19 +75,36 @@ class MosaicBase:
         for x in range(width // offset):
             print(self.debug_float)
             for y in range(height // offset):
-                mosaic_img.paste(self.sampleImages[(y + (x * (width//offset))) % len(self.sampleImages)], (x * offset, y * offset))
+                mosaic_img.paste(self.sampleImages[randint(0, len(self.sampleImages) - 1)], (x * offset, y * offset))
                 self.debug_float = (y + (x * (width//offset))) / ((width//offset) * (height//offset))
 
         print(self.scaledSource.size, mosaic_img.size)
         print(self.scaledSource.mode, mosaic_img.mode)
         
-        output_image = Image.blend(self.scaledSource, mosaic_img, 0.3)
+        output_image = Image.blend(self.scaledSource, mosaic_img, blend_factor)
         output_image.save(output)
 
-        
-    # make new image: PIL.Image.new(mode, size, color=0)
+    def generateTintedPhotoMosaic(self, output):
+        '''Generates a mosaic using the sample images as color pieces for the mosaic.
+           This method tints each photo to the mode of the color at the section it
+           replaces in the source photo at random.'''
+        pass
+
+    def generateSmartTintedPhotoMosaic(self, output):
+        '''Generates a mosaic using the sample images as color pieces for the mosaic.
+           This method attempts to find the closest relatives from the samples and
+           creates a pallette using those. This method is not guaranteed to be
+           evenly distributed.'''
+        pass
+
+    def generateBlendedOverlayWithSmartTintMosaic(self, output, blend_factor):
+        '''Generates a mosaic that is a blend of the Smart Tint with an overlay of
+           the source image.'''
+        pass
+    
+    
         
 #testing area
-#images = imageReader.getAllNamesFromDir('C:\\Users\\OWNER\\Pictures\\flat_colors')
-#base = MosaicBase(r'C:\Users\OWNER\Pictures\harold.png', images, 300, 300, 30)
-#base.generateOverlayMosaic(r'..\testing.png')
+images = imageReader.getAllNamesFromDir('C:\\Users\\OWNER\\Pictures\\flat_colors')
+base = MosaicBase(r'C:\Users\OWNER\Pictures\harold.png', images, 300, 300, 30)
+base.generateOverlayMosaic(r'..\testing.png', 0.4)
