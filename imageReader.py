@@ -32,11 +32,10 @@ def getModeColor(img):
 #debugging area
 #im = Image.open("test.jpg")
 #im.show()
-'''
-dir_list = getAllNamesFromDir(r'C:\Users\Devastator\Pictures\testing_series')
-print(dir_list, '\n\n')
 
-img_list = getImagesFromDirList(dir_list, 50, 50, 256)
-output = test_combine(img_list, 1000, 1000, 50)
-output.show()
-'''
+#dir_list = getAllNamesFromDir(r'C:\Users\Devastator\Pictures\testing_series')
+#print(dir_list, '\n\n')
+
+#img_list = getImagesFromDirList(dir_list, 50, 50, 256)
+#output = test_combine(img_list, 1000, 1000, 50)
+#output.show()
