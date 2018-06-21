@@ -21,6 +21,6 @@ def getImagesFromDirList(filelist, new_width, new_height, num_of_colors):
     scaledlist = []
     for item in imagelist:
         #new_img = item.quantize(num_of_colors)
-        scaledlist.append(new_img.resize((new_width, new_height)))
+        scaledlist.append(item.resize((new_width, new_height)))
 
     return scaledlist

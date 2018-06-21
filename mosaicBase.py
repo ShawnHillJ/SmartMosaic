@@ -27,8 +27,10 @@ class MosaicBase:
         self.outputWidth, self.outputHeight = out_width, out_height
         self.colorQuality = color_bit_depth
         self.samplesLoaded = False
-        self.x_offset = ((self.sourceImage.width / s_width) % 1) * s_width // 2
-        self.y_offset = ((self.sourceImage.height / s_height) % 1) * s_height // 2
+
+        self._scale_source()
+        self.x_offset = int((((self.scaledSource.width / sam_width) % 1) * sam_width) // 2)
+        self.y_offset = int((((self.scaledSource.height / sam_height) % 1) * sam_height) // 2)
         self.x_count, self.y_count = (self.outputWidth  // self.sampleWidth),\
                                      (self.outputHeight // self.sampleHeight)
         
@@ -45,7 +47,7 @@ class MosaicBase:
         ''' Loads in the images for sampleImages. '''
         if not self.samplesLoaded:
             self.sampleImages = getImagesFromDirList(self.sampleImagesNamelist,
-                                self.sampleScale, self.sampleScale, self.colorQuality)
+                                self.sampleWidth, self.sampleHeight, self.colorQuality)
             self.samplesLoaded = True
         
     def _scale_source(self):
@@ -56,18 +58,20 @@ class MosaicBase:
     def _split_source_evenly(self):
         '''Splits up the source image into segments and returns a list of those segments.
            Segments are closest to the whole size and are center-oriented.'''
-        segment_list = [[] for i in range(x)]
-        for x in range(x_count):
-            for y in range(y_count):
+        segment_list = [[] for i in range(self.x_count)]
+        s_width, s_height = self.outputWidth, self.outputHeight
+        for x in range(self.x_count):
+            for y in range(self.y_count):
 #                print((x * s_width + x_offset, y * s_height + y_offset,
 #                                   (x + 1) * s_width + x_offset, (y + 1) * s_height + y_offset))
-                segment_list[x].append(img.crop((x * s_width + x_offset, y * s_height + y_offset,
-                                   (x + 1) * s_width + x_offset, (y + 1) * s_height + y_offset)))
+                segment_list[x].append(self.scaledSource.crop((x * s_width + self.x_offset, y * s_height + self.y_offset,
+                                   (x + 1) * s_width + self.x_offset, (y + 1) * s_height + self.y_offset)))
         return segment_list
 
     def _get_mode_color(self, img):
         '''Returns the Mode color value of an Image object.'''
-        colorCount = img.getcolors()
+        colorCount = img.getcolors(maxcolors = self.colorQuality ** 3)
+        print(colorCount)
         colorCount.sort()
         return colorCount[len(colorCount) - 1][1]
 
@@ -79,26 +83,25 @@ class MosaicBase:
         for img_object in self.sampleImages:
             img_object.save(output_dir + '\\' + counter.zfill(4) + '.jpg')
         
-    def generateOverlayMosaic(self, output, blend_factor):
+    def generateOverlayMosaic(self, blend_factor):
         ''' Generates a mosaic using the simple overlay method.
         Outputs the image as a file with the name given as
         an argument.'''
         self._scale_images()
-        self._scale_source()
         
-        offset = self.sampleScale
         width, height = self.outputWidth, self.outputHeight
+        s_width, s_height = self.sampleWidth, self.sampleHeight
         self.debug_float = 0.0
-        mosaic_img = Image.new("RGBA", (width, height))
+        mosaic_img = Image.new("RGB", (width, height))
         for x in range(self.x_count):
             print(self.debug_float)
             for y in range(self.y_count):
                 mosaic_img.paste(self.sampleImages[randint(0, len(self.sampleImages) - 1)],
-                                 ((x * offset) + self.x_offset, (y * offset) + self.y_offset))
+                                 ((x * s_width) + self.x_offset, (y * s_height) + self.y_offset))
                 self.debug_float = (y + (x * (self.x_count))) / ((self.x_count) ** 2)
         
         output_image = Image.blend(self.scaledSource, mosaic_img, blend_factor)
-        output_image.putalpha(1)
+        output_image.putalpha(0)
         self.result = output_image
 
     def generateTintedPhotoMosaic(self):
@@ -106,19 +109,20 @@ class MosaicBase:
            This method tints each photo to the mode of the color at the section it
            replaces in the source photo at random.'''
         self._scale_images()
-        self._scale_source()
 
         self.debug_float = 0.0
         mosaic_img = Image.new("RGBA", (self.outputWidth, self.outputHeight))
 
         sourceSections = self._split_source_evenly();
+        print(sourceSections)
 
         for x in range(self.x_count):
             print(self.debug_float)
             for y in range(self.y_count):
-                current_color = _get_mode_color(sourceSections[y + (x * self.x_count)])
+                print(sourceSections[x][y], x, y)
+                current_color = self._get_mode_color(sourceSections[x][y])
                 img_insert = ImageChops.multiply(self.sampleImages[randint(0, len(self.sampleImages) - 1)],\
-                                 Image.new("RGBA", (self.outputWidth, self.outputHeight), current_color))
+                                 Image.new("RGB", (self.outputWidth, self.outputHeight), current_color))
                 mosaic_img.paste(img_insert, ((x * offset) + self.x_offset, (y * offset) + self.y_offset))
 
         self.result = mosaic_img
@@ -131,10 +135,9 @@ class MosaicBase:
            chosen and tinted. '''
 
         self._scale_images()
-        self._scale_source()
         
         self.debug_float = 0.0
-        mosaic_img = Image.new("RGBA", (self.outputWidth, self.outputHeight))
+        mosaic_img = Image.new("RGB", (self.outputWidth, self.outputHeight))
 
         sourceSections = self._split_source_evenly();
         sourceSectionsFlat = [item for sublist in sourceSections for item in sublist]
@@ -152,7 +155,7 @@ class MosaicBase:
                 
                 if len(current_img_list) == 0:
                     img_insert = ImageChops.multiply(self.sampleImages[randint(0, len(self.sampleImages) - 1)],\
-                                 Image.new("RGBA", (self.outputWidth, self.outputHeight), current_color))
+                                 Image.new("RGB", (self.outputWidth, self.outputHeight), current_color))
                     mosaic_img.paste(img_insert, ((x * offset) + self.x_offset, (y * offset) + self.y_offset))
 
                 else:
@@ -179,10 +182,15 @@ class MosaicBase:
     def getResult(self):
        ''' Returns the result image, None if not generated. '''
        return self.result
-    
+
+    def close(self):
+       ''' Closes the result. '''
+       self.result.close()
     
         
 #testing area
-#images = getAllNamesFromDir('C:\\Users\\OWNER\\Pictures\\flat_colors')
-#base = MosaicBase(r'C:\Users\OWNER\Pictures\harold.png', images, 300, 300, 30)
-#base.generateOverlayMosaic(r'..\testing.png', 0.4)
+images = getAllNamesFromDir(r'C:\Users\Devastator\Pictures\testing_series')
+base = MosaicBase(r'C:\Users\Devastator\Pictures\testing_series\mario.jpg', images, 300, 300, 30, 30)
+base.generateTintedPhotoMosaic()
+base.outputResult(r'..\testing.jpg')
+#base.close()
