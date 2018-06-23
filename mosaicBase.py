@@ -83,10 +83,15 @@ class MosaicBase:
         for img_object in self.sampleImages:
             img_object.save(output_dir + '\\' + counter.zfill(4) + '.jpg')
         
-    def generateOverlayMosaic(self, blend_factor):
+    def generateOverlayMosaic(self, blend_factor, combined = False):
         ''' Generates a mosaic using the simple overlay method.
         Outputs the image as a file with the name given as
         an argument.'''
+
+        if combined:
+            self.result = Image.blend(self.scaledSource, self.result, blend_factor)
+            return
+
         self._scale_images()
         
         width, height = self.outputWidth, self.outputHeight
@@ -102,6 +107,7 @@ class MosaicBase:
         
         output_image = Image.blend(self.scaledSource, mosaic_img, blend_factor)
         output_image.putalpha(0)
+
         self.result = output_image
 
     def generateTintedPhotoMosaic(self):
@@ -173,8 +179,9 @@ class MosaicBase:
     def generateBlendedOverlayWithSmartTintMosaic(self, output, blend_factor):
         '''Generates a mosaic that is a blend of the Smart Tint with an overlay of
            the source image.'''
-        pass
-
+        self.generateSmartTintedPhotoMosaic()
+        self.generateOverlayMosaic(blend_factor, combined = True)
+        
     def outputResult(self, output):
        ''' Outputs the result to a file. '''
        self.result.save(output)
